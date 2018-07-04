@@ -6,7 +6,10 @@ s = [0, 0, 0]
 
 
 def add_occurence(i, html_text, search_term):
-    reg = re.compile(search_term)
+    if search_term.isdigit():
+        reg = re.compile(u'[ ]?[(למהו.,/"]?'+search_term+u'[ )!?.",/]')
+    else:
+        reg = re.compile(u' [(למהו.,/"]?'+search_term+u'[ -)!?.",/]')
     with lock:
         s[i] += reg.findall(html_text).__len__()
 
@@ -20,7 +23,7 @@ def search_url(url, answers):
             t.daemon = True
             t.start()
     except:
-        print("not good no no")
+        pass
 
 
 def get_answer(question, answers):
@@ -29,6 +32,7 @@ def get_answer(question, answers):
     threads = []
 
     for url in url_list:
+       # print(url)
         thread = threading.Thread(target=search_url, args=(url, answers))
         thread.daemon = True
         threads.append(thread)
@@ -40,6 +44,7 @@ def get_answer(question, answers):
         thread.join()
 
     for i in range(0, 3):
+        print(answers[i], s[i])
         if s[i] > s[index_of_max]:
             index_of_max = i
 
@@ -49,5 +54,8 @@ def get_answer(question, answers):
 def parse_query(query):
     query = str(query)
     if query.find(u"השלם את המשפט") != -1:
-        return query.split('\"')[1]
+        try:
+            return query.split('\"')[1]
+        except:
+            return query
     return query

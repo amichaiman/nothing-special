@@ -30,7 +30,7 @@ def get_raw_html(url):
 def get_html(url):
     req = urllib.request.Request(url, headers=get_header())
     result = urllib.request.urlopen(req)
-    soup = BeautifulSoup(result.read().decode('utf-8'),"lxml")
+    soup = BeautifulSoup(result.read().decode('utf-8'), "lxml")
     return soup.get_text()
 
 
