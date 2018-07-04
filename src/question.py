@@ -6,16 +6,14 @@ s = [0, 0, 0]
 
 
 def add_occurence(i, html_text, search_term):
-    if search_term.isdigit():
-        reg = re.compile(u'[ ]?[(למהו.,/"]?'+search_term+u'[ )!?.",/]')
-    else:
-        reg = re.compile(u' [(למהו.,/"]?'+search_term+u'[ -)!?.",/]')
+    reg = re.compile(u' [(למהו.,/"]?' + search_term + u'[ -)!?.",/]')
     with lock:
         s[i] += reg.findall(html_text).__len__()
 
 
 def search_url(url, answers):
     try:
+        print(url)
         html_text = get_html(url)
         html_text.encode('utf-8')
         for i, search_term in answers.items():
@@ -30,9 +28,19 @@ def get_answer(question, answers):
     url_list = google_search_result_websites(question)
     index_of_max = 0
     threads = []
+    google_url = google_search_url(question)
+    google_html = get_html(google_url)
+
+    for i in range(0, 3):
+        thread = threading.Thread(target=add_occurence, args=(i, google_html, answers[i]))
+        thread.daemon = True
+        thread.start()
+        threads.append(thread)
+        with lock:
+            if s[i] > 60:
+                return i
 
     for url in url_list:
-       # print(url)
         thread = threading.Thread(target=search_url, args=(url, answers))
         thread.daemon = True
         threads.append(thread)
