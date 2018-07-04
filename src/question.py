@@ -9,20 +9,20 @@ def get_answer(question, answers):
     for url in url_list:
         try:
             print(url)
-            html_text = get_html_text(url)
+            html_text = get_html(url)
+            html_text.encode('utf-8')
             for i, search_term in answers.items():
                 sum[i] += get_occurrence_number(html_text, search_term)
                 if sum[i] > sum[index_of_max]:
                     index_of_max = i
 
-                print(sum[index_of_max])
-                print(sum[i])
-                # for j in range(0, answers.__len__()):
-                #     if i != j and sum[i] - sum[j] > 10:
-                #         return i
+                for j in range(0, answers.__len__()):
+                    if i != j and sum[i] - sum[j] > 15:
+                        return i
         except:
             print("not good no no")
-
+    for i in range(0,3):
+        print(sum[i])
     return index_of_max
 
 
