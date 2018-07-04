@@ -6,14 +6,9 @@ from bs4 import BeautifulSoup
 from urllib.parse import quote
 
 
-def get_occurrence_number(html_text, pattern):
-    reg = re.compile(pattern)
-    return reg.findall(html_text).__len__()
-
 
 def get_websites(url):
     html_text = get_raw_html(url)
-    print(html_text)
     regex = re.compile(r'a href="http[^"]*"')
     url_set = set()
     for link in regex.findall(html_text):
