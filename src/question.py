@@ -10,6 +10,8 @@ s = [0, 0, 0]
 found = False
 index_of_answer = 0
 opposite = False
+unique = False
+threads = []
 
 
 def add_occurrence(i, html_text, search_term, answers):
@@ -20,6 +22,13 @@ def add_occurrence(i, html_text, search_term, answers):
 
     if found:
         return
+    if unique:
+        reg = re.compile(u'חסר:*.{0}*.'.format(search_term))
+        if reg.findall(html_text).__len__() > 0:
+            print(answers[i])
+            with sum_lock:
+                found = True
+                index_of_answer = i
 
     reg = re.compile(u'[ (למהו.,/"]?' + search_term + u'[ -)!?.",/]')
 
@@ -69,6 +78,17 @@ def search_url(url, answers):
         pass
 
 
+def add_google_page_matches(question, answers):
+    google_url = google_search_url(question)
+    # print(google_url)
+    google_html = get_html(google_url)
+    for i in range(0, answers.__len__()):
+        thread = threading.Thread(target=add_occurrence, args=(i, google_html, answers[i], answers))
+        thread.daemon = True
+        thread.start()
+        threads.append(thread)
+
+
 def get_answer(question, answers, quick):
     global s
     global index_of_answer
@@ -77,18 +97,14 @@ def get_answer(question, answers, quick):
     parse_answer(answers)
 
     url_list = google_search_result_websites(question)
-    threads = []
+
     google_url = google_search_url(question)
     # print(google_url)
     google_html = get_html(google_url)
 
-    for i in range(0, 3):
-        thread = threading.Thread(target=add_occurrence, args=(i, google_html, answers[i], answers))
-        thread.daemon = True
-        thread.start()
-        threads.append(thread)
+    add_google_page_matches(question, answers)
 
-    if not quick:
+    if not quick and not unique:
         for url in url_list:
             thread = threading.Thread(target=search_url, args=(url, answers))
             thread.daemon = True
@@ -116,10 +132,27 @@ def get_answer(question, answers, quick):
     return index_of_answer
 
 
-def parse_query(query):
+def concatinate_answers(answers):
+    query = ""
+    for i in range(0, answers.__len__()):
+        query += answers[i] + " "
+    return query
+
+def parse_query(query, answers):
     global opposite
+    global unique
 
     query = str(query)
+
+    if query.find(u'יוצא דופן') != -1:
+        query = concatinate_answers(answers)
+        unique = True
+        opposite = True
+        return query
+    if query.find(u'מי מהבאים') != -1:
+        query = concatinate_answers(answers)
+        unique = True
+
     if query.find(u'לא') != -1:
         query.replace(u'לא', '')
         opposite = True
