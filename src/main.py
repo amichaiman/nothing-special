@@ -9,4 +9,4 @@ for i in range(0, 3):
     answers[i] = answer
 
 
-print("answer: " + answers[get_answer(parse_query(query), answers)])
+print("answer: " + answers[get_answer(parse_query(query), answers, False)])

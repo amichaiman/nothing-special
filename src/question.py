@@ -1,69 +1,142 @@
+from typing import List
+
 from src.webcrawl import *
 import threading
 
-lock = threading.Lock()
+sum_lock = threading.Lock()
+index_of_answer_lock = threading.Lock()
+
 s = [0, 0, 0]
+found = False
+index_of_answer = 0
+opposite = False
 
 
-def add_occurence(i, html_text, search_term):
-    reg = re.compile(u' [(למהו.,/"]?' + search_term + u'[ -)!?.",/]')
-    with lock:
+def add_occurrence(i, html_text, search_term, answers):
+    global found
+    global sum_lock
+    global index_of_answer
+    global opposite
+
+    if found:
+        return
+
+    reg = re.compile(u'[ (למהו.,/"]?' + search_term + u'[ -)!?.",/]')
+
+    if found:
+        return
+
+    with sum_lock:
         s[i] += reg.findall(html_text).__len__()
+
+    if opposite:
+        less_count = 0
+        for j in range(0, answers.__len__()):
+            if i != j and s[j] - s[i] > 5:
+                less_count = less_count + 1
+        if less_count == answers.__len__() - 1:
+            with sum_lock:
+                print(answers[i])
+                found = True
+                index_of_answer = i
+                return
+
+    for j in range(0, answers.__len__()):
+        if not opposite and s[i] - s[j] > 14:
+            if found:
+                return
+            with sum_lock:
+                found = True
+            with index_of_answer_lock:
+                index_of_answer = i
+                print(answers[i])
 
 
 def search_url(url, answers):
     try:
-        print(url)
+        # print(url)
         html_text = get_html(url)
         html_text.encode('utf-8')
         for i, search_term in answers.items():
-            t = threading.Thread(target=add_occurence, args=(i, html_text, search_term))
+            t = threading.Thread(target=add_occurrence, args=(i, html_text, search_term, answers))
             t.daemon = True
+
+            if found:
+                return
+
             t.start()
     except:
         pass
 
 
-def get_answer(question, answers):
+def get_answer(question, answers, quick):
+    global s
+    global index_of_answer
+    global opposite
+
+    parse_answer(answers)
+
     url_list = google_search_result_websites(question)
-    index_of_max = 0
     threads = []
     google_url = google_search_url(question)
+    # print(google_url)
     google_html = get_html(google_url)
 
     for i in range(0, 3):
-        thread = threading.Thread(target=add_occurence, args=(i, google_html, answers[i]))
+        thread = threading.Thread(target=add_occurrence, args=(i, google_html, answers[i], answers))
         thread.daemon = True
         thread.start()
         threads.append(thread)
-        with lock:
-            if s[i] > 60:
-                return i
 
-    for url in url_list:
-        thread = threading.Thread(target=search_url, args=(url, answers))
-        thread.daemon = True
-        threads.append(thread)
-        thread.start()
-        # if threads.__len__() > 3:
-        #     break
+    if not quick:
+        for url in url_list:
+            thread = threading.Thread(target=search_url, args=(url, answers))
+            thread.daemon = True
+            threads.append(thread)
+            if found:
+                return index_of_answer
+
+            thread.start()
 
     for thread in threads:
         thread.join()
 
-    for i in range(0, 3):
-        print(answers[i], s[i])
-        if s[i] > s[index_of_max]:
-            index_of_max = i
+    if not found:
+        for i in range(0, 3):
+            print(answers[i], s[i])
+            if opposite:
+                if s[i] < s[index_of_answer]:
+                    with index_of_answer_lock:
+                        index_of_answer = i
+            else:
+                if s[i] > s[index_of_answer]:
+                    with index_of_answer_lock:
+                        index_of_answer = i
 
-    return index_of_max
+    return index_of_answer
 
 
 def parse_query(query):
+    global opposite
+
     query = str(query)
-    if query.find(u"השלם את המשפט") != -1:
-        try:
-            return query.split('\"')[1]
-        except:
-            return query
-    return query
+    if query.find(u'לא') != -1:
+        query.replace(u'לא', '')
+        opposite = True
+    try:
+        return query.split('\"')[1]
+    except:
+        return query
+
+
+def parse_answer(answers):
+    reg_count = [0, 0]
+    for i in range(0, answers.__len__()):
+        if answers[i][0] == u'ב':
+            reg_count[0] += 1
+        elif answers[i][0] == u'ל':
+            reg_count[1] += 1
+
+    if reg_count[0] == answers.__len__() or reg_count[1] == answers.__len__():
+        for i in range(0, answers.__len__()):
+            answers[i] = answers[i][1:]
