@@ -1,17 +1,20 @@
-from typing import List
-
 from src.webcrawl import *
 import threading
+import time
 
 sum_lock = threading.Lock()
 index_of_answer_lock = threading.Lock()
 
-s = [0, 0, 0]
+s = [0 for i in range(0, 3)]
 found = False
 index_of_answer = 0
 opposite = False
 unique = False
 threads = []
+
+
+def print_statistics():
+    print('%.2f' % (s[index_of_answer] / sum(s) * 100) + '%')
 
 
 def add_occurrence(i, html_text, search_term, answers):
@@ -46,6 +49,7 @@ def add_occurrence(i, html_text, search_term, answers):
         if less_count == answers.__len__() - 1:
             with sum_lock:
                 print(answers[i])
+                print_statistics()
                 found = True
                 index_of_answer = i
                 return
@@ -59,6 +63,7 @@ def add_occurrence(i, html_text, search_term, answers):
             with index_of_answer_lock:
                 index_of_answer = i
                 print(answers[i])
+                print_statistics()
 
 
 def search_url(url, answers):
@@ -80,7 +85,7 @@ def search_url(url, answers):
 
 def add_google_page_matches(question, answers):
     google_url = google_search_url(question)
-    # print(google_url)
+    print(google_url)
     google_html = get_html(google_url)
     for i in range(0, answers.__len__()):
         thread = threading.Thread(target=add_occurrence, args=(i, google_html, answers[i], answers))
@@ -89,18 +94,27 @@ def add_google_page_matches(question, answers):
         threads.append(thread)
 
 
+def print_soon(answers,i):
+    time.sleep(5)
+
+    if not found:
+        with sum_lock:
+            for i in range(0, answers.__len__()):
+                print(answers[i])
+
+
 def get_answer(question, answers, quick):
     global s
     global index_of_answer
     global opposite
 
+    timer = threading.Thread(target=print_soon, args=(answers,2))
+    timer.daemon = True
+    timer.start()
+
     parse_answer(answers)
 
     url_list = google_search_result_websites(question)
-
-    google_url = google_search_url(question)
-    # print(google_url)
-    google_html = get_html(google_url)
 
     add_google_page_matches(question, answers)
 
@@ -140,13 +154,16 @@ def concatinate_answers(answers):
 
 
 def remove_redundant_words(query):
-    query = " " + query
+    query = " " + query + " "
     for word in [u'מה', u'מי', u'אם', u'הייתי', u'הגעתי', u'כנראה', u'עליהם', u'איזו', u'אילו', u'מהו'
-        , u'איך', u'קוראים', u'היכן', u'סביר', u'להניח', u'אותי', u'היה', u'את']:
-        reg = re.compile(u' *.{0}'.format(word))
+        , u'איך', u'קוראים', u'היכן', u'סביר', u'להניח', u'אותי', u'היה', u'את', u'ניתן', u'אני', u'של']:
+        reg = re.compile(u' ?.{0} '.format(word))
         for match in reg.findall(query):
             if query.find(word):
-                query = remove_word(query, match[1:])
+                if match[0] == ' ':
+                    query = remove_word(query, match[1:])
+                else:
+                    query = remove_word(query, match)
     return query
 
 
@@ -168,17 +185,16 @@ def parse_query(query, answers):
 
     if query.find(u'מהבאים') != -1:
         if query.find(u'לא') != -1:
-            query = query[query.find(u'לא') + 3:]
+            query = query[query.find(u'לא ') + 3:]
             opposite = True
             unique = True
             return query + " " + concatinate_answers(answers)
 
         query = query[query.find(u'מהבאים') + 6:]
-        print(query)
         return query
-
-    if query.find(u'לא') != -1:
-        query.replace(u'לא', '')
+    loc = query.find(u'לא ')
+    if loc != -1:
+        query = query[:loc] + query[loc + 3:]
         opposite = True
     try:
         return query.split('\"')[1]
