@@ -138,6 +138,22 @@ def concatinate_answers(answers):
         query += answers[i] + " "
     return query
 
+
+def remove_redundant_words(query):
+    query = " " + query
+    for word in [u'מה', u'מי', u'אם', u'הייתי', u'הגעתי', u'כנראה', u'עליהם', u'איזו', u'אילו', u'מהו'
+        , u'איך', u'קוראים', u'היכן', u'סביר', u'להניח', u'אותי', u'היה', u'את']:
+        reg = re.compile(u' *.{0}'.format(word))
+        for match in reg.findall(query):
+            if query.find(word):
+                query = remove_word(query, match[1:])
+    return query
+
+
+def remove_word(query, to_remove):
+    return query.replace(to_remove, '')
+
+
 def parse_query(query, answers):
     global opposite
     global unique
@@ -149,9 +165,17 @@ def parse_query(query, answers):
         unique = True
         opposite = True
         return query
-    if query.find(u'מי מהבאים') != -1:
-        query = concatinate_answers(answers)
-        unique = True
+
+    if query.find(u'מהבאים') != -1:
+        if query.find(u'לא') != -1:
+            query = query[query.find(u'לא') + 3:]
+            opposite = True
+            unique = True
+            return query + " " + concatinate_answers(answers)
+
+        query = query[query.find(u'מהבאים') + 6:]
+        print(query)
+        return query
 
     if query.find(u'לא') != -1:
         query.replace(u'לא', '')
@@ -159,7 +183,7 @@ def parse_query(query, answers):
     try:
         return query.split('\"')[1]
     except:
-        return query
+        return remove_redundant_words(query)
 
 
 def parse_answer(answers):
