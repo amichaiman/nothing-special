@@ -5,7 +5,7 @@ import time
 sum_lock = threading.Lock()
 index_of_answer_lock = threading.Lock()
 
-s = [0 for i in range(0, 3)]
+s = []
 found = False
 index_of_answer = 0
 opposite = False
@@ -16,14 +16,13 @@ threads = []
 def print_answers(answers):
     global opposite
 
-    percent = 1
-    if opposite:
-        percent = 100
-
-    print('%s : %.2f' % (answers[index_of_answer], percent - s[index_of_answer] / sum(s) * 100) + '%')
-    for i in range(0, answers.__len__()):
-        if i is not index_of_answer:
-            print('%s %.2f' % (answers[i], percent - s[i] / sum(s) * 100) + '%')
+    try:
+        print('%s : %.2f' % (answers[index_of_answer], s[index_of_answer] / sum(s) * 100) + '%')
+        for i in range(0, answers.__len__()):
+            if i is not index_of_answer:
+                print('%s %.2f' % (answers[i], s[i] / sum(s) * 100) + '%')
+    except:
+        print("couldn't compute answer")
 
 
 def add_occurrence(i, html_text, search_term, answers, weight):
@@ -53,7 +52,7 @@ def add_occurrence(i, html_text, search_term, answers, weight):
     if opposite:
         less_count = 0
         for j in range(0, answers.__len__()):
-            if i != j and s[j] - s[i] > 30:
+            if i != j and s[j] - s[i] > 70:
                 less_count = less_count + 1
         if less_count == answers.__len__() - 1:
             with sum_lock:
@@ -71,6 +70,7 @@ def add_occurrence(i, html_text, search_term, answers, weight):
             with index_of_answer_lock:
                 index_of_answer = i
                 print_answers(answers)
+
 
 def search_url(url, answers, weight):
     try:
@@ -104,9 +104,11 @@ def print_soon(answers, length):
     time.sleep(length)
 
     if not found:
-        with sum_lock:
-            for i in range(0, answers.__len__()):
-                print(answers[i])
+        print("***********************************************")
+        print("************       estimate        ************")
+        print("***********************************************")
+        print_answers(answers)
+        print("***********************************************")
 
 
 def get_answer(question, answers, quick):
@@ -114,9 +116,11 @@ def get_answer(question, answers, quick):
     global index_of_answer
     global opposite
 
-    # timer = threading.Thread(target=print_soon, args=(answers,2))
-    # timer.daemon = True
-    # timer.start()
+    s = [0 for i in answers]
+
+    timer = threading.Thread(target=print_soon, args=(answers, 2))
+    timer.daemon = True
+    timer.start()
 
     parse_answer(answers)
     weight = 10
@@ -133,12 +137,12 @@ def get_answer(question, answers, quick):
                 return index_of_answer
 
             thread.start()
-            weight = weight * 0.85
+            weight = weight * 0.7
     for thread in threads:
         thread.join()
 
     if not found:
-        for i in range(0, 3):
+        for i in range(0, answers.__len__()):
             if opposite:
                 if s[i] < s[index_of_answer]:
                     with index_of_answer_lock:
@@ -162,15 +166,16 @@ def concatinate_answers(answers):
 
 def remove_redundant_words(query):
     query = " " + query + " "
-    for word in [u'מה', u'מי', u'אם', u'הייתי', u'הגעתי', u'כנראה', u'עליהם', u'איזו', u'אילו', u'מהו'
+    for word in [u'מה', u'איזה', u'מי', u'אם', u'הייתי', u'הגעתי', u'כנראה', u'עליהם', u'איזו', u'אילו', u'מהו'
         , u'איך', u'קוראים', u'היכן', u'סביר', u'להניח', u'אותי', u'היה', u'את', u'ניתן', u'אני', u'של']:
-        reg = re.compile(u' ?.{0} '.format(word))
+        reg = re.compile(u'[ ].?' + word + '[ ]')
         for match in reg.findall(query):
+            # print(match)
             if query.find(word):
-                if match[0] == ' ':
-                    query = remove_word(query, match[1:])
+                if match[-1] == ' ':
+                    query = remove_word(query, match[1:-1])
                 else:
-                    query = remove_word(query, match)
+                    query = remove_word(query, match[1:-1])
     return query
 
 
@@ -190,14 +195,14 @@ def parse_query(query, answers):
         opposite = True
         return query
 
-    if query.find(u'מהבאים') != -1:
+    if query.find(u'מהבאים') != -1 or query.find(u'מהבאות') != -1:
         if query.find(u'לא') != -1:
             query = query[query.find(u'לא ') + 3:]
             opposite = True
             unique = True
             return query + " " + concatinate_answers(answers)
 
-        query = query[query.find(u'מהבאים') + 6:]
+        query = query[query.find(u'מהבא') + 6:]
         return query
     loc = query.find(u'לא ')
     if loc != -1:
