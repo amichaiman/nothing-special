@@ -13,11 +13,20 @@ unique = False
 threads = []
 
 
-def print_statistics():
-    print('%.2f' % (s[index_of_answer] / sum(s) * 100) + '%')
+def print_answers(answers):
+    global opposite
+
+    percent = 1
+    if opposite:
+        percent = 100
+
+    print('%s : %.2f' % (answers[index_of_answer], percent - s[index_of_answer] / sum(s) * 100) + '%')
+    for i in range(0, answers.__len__()):
+        if i is not index_of_answer:
+            print('%s %.2f' % (answers[i], percent - s[i] / sum(s) * 100) + '%')
 
 
-def add_occurrence(i, html_text, search_term, answers):
+def add_occurrence(i, html_text, search_term, answers, weight):
     global found
     global sum_lock
     global index_of_answer
@@ -28,7 +37,7 @@ def add_occurrence(i, html_text, search_term, answers):
     if unique:
         reg = re.compile(u'חסר:*.{0}*.'.format(search_term))
         if reg.findall(html_text).__len__() > 0:
-            print(answers[i])
+            print_answers(answers)
             with sum_lock:
                 found = True
                 index_of_answer = i
@@ -39,40 +48,37 @@ def add_occurrence(i, html_text, search_term, answers):
         return
 
     with sum_lock:
-        s[i] += reg.findall(html_text).__len__()
+        s[i] += reg.findall(html_text).__len__() * weight
 
     if opposite:
         less_count = 0
         for j in range(0, answers.__len__()):
-            if i != j and s[j] - s[i] > 5:
+            if i != j and s[j] - s[i] > 30:
                 less_count = less_count + 1
         if less_count == answers.__len__() - 1:
             with sum_lock:
-                print(answers[i])
-                print_statistics()
+                print_answers(answers)
                 found = True
                 index_of_answer = i
                 return
 
     for j in range(0, answers.__len__()):
-        if not opposite and s[i] - s[j] > 14:
+        if not opposite and s[i] - s[j] > 150:
             if found:
                 return
             with sum_lock:
                 found = True
             with index_of_answer_lock:
                 index_of_answer = i
-                print(answers[i])
-                print_statistics()
+                print_answers(answers)
 
-
-def search_url(url, answers):
+def search_url(url, answers, weight):
     try:
         # print(url)
         html_text = get_html(url)
         html_text.encode('utf-8')
         for i, search_term in answers.items():
-            t = threading.Thread(target=add_occurrence, args=(i, html_text, search_term, answers))
+            t = threading.Thread(target=add_occurrence, args=(i, html_text, search_term, answers, weight))
             t.daemon = True
 
             if found:
@@ -83,19 +89,19 @@ def search_url(url, answers):
         pass
 
 
-def add_google_page_matches(question, answers):
+def add_google_page_matches(question, answers, weight):
     google_url = google_search_url(question)
     print(google_url)
     google_html = get_html(google_url)
     for i in range(0, answers.__len__()):
-        thread = threading.Thread(target=add_occurrence, args=(i, google_html, answers[i], answers))
+        thread = threading.Thread(target=add_occurrence, args=(i, google_html, answers[i], answers, weight))
         thread.daemon = True
         thread.start()
         threads.append(thread)
 
 
-def print_soon(answers,i):
-    time.sleep(5)
+def print_soon(answers, length):
+    time.sleep(length)
 
     if not found:
         with sum_lock:
@@ -108,32 +114,31 @@ def get_answer(question, answers, quick):
     global index_of_answer
     global opposite
 
-    timer = threading.Thread(target=print_soon, args=(answers,2))
-    timer.daemon = True
-    timer.start()
+    # timer = threading.Thread(target=print_soon, args=(answers,2))
+    # timer.daemon = True
+    # timer.start()
 
     parse_answer(answers)
-
+    weight = 10
     url_list = google_search_result_websites(question)
 
-    add_google_page_matches(question, answers)
+    add_google_page_matches(question, answers, weight)
 
     if not quick and not unique:
         for url in url_list:
-            thread = threading.Thread(target=search_url, args=(url, answers))
+            thread = threading.Thread(target=search_url, args=(url, answers, weight))
             thread.daemon = True
             threads.append(thread)
             if found:
                 return index_of_answer
 
             thread.start()
-
+            weight = weight * 0.85
     for thread in threads:
         thread.join()
 
     if not found:
         for i in range(0, 3):
-            print(answers[i], s[i])
             if opposite:
                 if s[i] < s[index_of_answer]:
                     with index_of_answer_lock:
@@ -143,6 +148,8 @@ def get_answer(question, answers, quick):
                     with index_of_answer_lock:
                         index_of_answer = i
 
+    if not found:
+        print_answers(answers)
     return index_of_answer
 
 
