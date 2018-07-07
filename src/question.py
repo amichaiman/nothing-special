@@ -191,7 +191,7 @@ def parse_input(query, answers):
     reg_count = [0, 0]
 
     for i in range(0, answers.__len__()):
-        # answers[i] = answers[i].replace("'", u"י")
+        answers[i] = answers[i].replace("'", u"[י']")
         if answers[i][0] == u'ב':
             reg_count[0] += 1
         elif answers[i][0] == u'ל':
@@ -206,7 +206,7 @@ def parse_input(query, answers):
         query = concatinate_answers(answers)
         unique = True
         opposite = True
-        return query
+        return query, answers
 
     if query.find(u'מהבאים') != -1 or query.find(u'מהבאות') != -1:
         if query.find(u'לא') != -1:
@@ -216,12 +216,13 @@ def parse_input(query, answers):
             return query + " " + concatinate_answers(answers), answers
 
         query = query[query.find(u'מהבא') + 6:]
-        return query
+        return query, answers
     loc = query.find(u'לא ')
     if loc != -1:
         query = query[:loc] + query[loc + 3:]
         opposite = True
     try:
-        return query.split('\"')[1], answers
+        query.replace("\n", " ")
+        return re.split("”", query)[1], answers
     except:
         return remove_redundant_words(query), answers

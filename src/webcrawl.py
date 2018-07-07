@@ -1,10 +1,8 @@
 import re
 import urllib.request
-from lxml import html
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import quote
-
 
 
 def get_websites(url):
@@ -46,5 +44,6 @@ def google_search_url(search_query):
 
 def get_header():
     headers = {
-        'User-Agent': r'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 'r'Safari/537.36 '}
+        'User-Agent': r'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 '
+                      r'Safari/537.36'}
     return headers
