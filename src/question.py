@@ -22,7 +22,8 @@ def print_answers(answers):
             if i is not index_of_answer:
                 print('%s %.2f' % (answers[i], s[i] / sum(s) * 100) + '%')
     except:
-        print("couldn't compute answer")
+        print("couldn't compute an answer")
+        print_soon(answers, 2)
 
 
 def add_occurrence(i, html_text, search_term, answers, weight):
@@ -122,7 +123,6 @@ def get_answer(question, answers, quick):
     timer.daemon = True
     timer.start()
 
-    parse_answer(answers)
     weight = 10
     url_list = google_search_result_websites(question)
 
@@ -183,12 +183,25 @@ def remove_word(query, to_remove):
     return query.replace(to_remove, '')
 
 
-def parse_query(query, answers):
+def parse_input(query, answers):
     global opposite
     global unique
 
-    query = str(query)
+    # parse answers
+    reg_count = [0, 0]
 
+    for i in range(0, answers.__len__()):
+        # answers[i] = answers[i].replace("'", u"י")
+        if answers[i][0] == u'ב':
+            reg_count[0] += 1
+        elif answers[i][0] == u'ל':
+            reg_count[1] += 1
+
+    if reg_count[0] == answers.__len__() or reg_count[1] == answers.__len__():
+        for i in range(0, answers.__len__()):
+            answers[i] = answers[i][1:]
+
+    # parse question
     if query.find(u'יוצא דופן') != -1:
         query = concatinate_answers(answers)
         unique = True
@@ -200,7 +213,7 @@ def parse_query(query, answers):
             query = query[query.find(u'לא ') + 3:]
             opposite = True
             unique = True
-            return query + " " + concatinate_answers(answers)
+            return query + " " + concatinate_answers(answers), answers
 
         query = query[query.find(u'מהבא') + 6:]
         return query
@@ -209,19 +222,6 @@ def parse_query(query, answers):
         query = query[:loc] + query[loc + 3:]
         opposite = True
     try:
-        return query.split('\"')[1]
+        return query.split('\"')[1], answers
     except:
-        return remove_redundant_words(query)
-
-
-def parse_answer(answers):
-    reg_count = [0, 0]
-    for i in range(0, answers.__len__()):
-        if answers[i][0] == u'ב':
-            reg_count[0] += 1
-        elif answers[i][0] == u'ל':
-            reg_count[1] += 1
-
-    if reg_count[0] == answers.__len__() or reg_count[1] == answers.__len__():
-        for i in range(0, answers.__len__()):
-            answers[i] = answers[i][1:]
+        return remove_redundant_words(query), answers

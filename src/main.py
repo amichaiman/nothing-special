@@ -1,18 +1,10 @@
+import src.imageprocess
 from src.question import *
-from src.hebocr import *
 
-query = input('enter question: ')
-answers = {}
+question, answers = src.imageprocess.get_question_and_answers()
 
-i = 0
-while True:
-    answer = str(input("add answer ( or enter to quit ): "))
-    if answer is "":
-        break
-    answers[i] = answer
-    i += 1
+print(question)
+for i in answers:
+    print(answers[i])
 
-query = parse_query(query, answers)
-
-print(query)
-print("answer: " + answers[get_answer(query, answers, False)])
+print("answer: " + answers[get_answer(question , answers, False)])
