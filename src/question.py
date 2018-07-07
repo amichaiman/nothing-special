@@ -23,7 +23,7 @@ def print_answers(answers):
                 print('%s %.2f' % (answers[i], s[i] / sum(s) * 100) + '%')
     except:
         print("couldn't compute an answer")
-        print_soon(answers, 2)
+        # print_soon(answers, 3)
 
 
 def add_occurrence(i, html_text, search_term, answers, weight):
