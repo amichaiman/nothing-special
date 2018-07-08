@@ -3,20 +3,19 @@ from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 
 
 def get_question_and_answers():
-    img_path = "/home/amichai/PycharmProjects/q/src/"
+    img_path = "/home/amichai/PycharmProjects/quick/src/"
     img_extension = ".jpeg"
     img = Image.open(img_path + "image" + img_extension)
-    img = ImageOps.invert(img)
     pix = img.load()
     w, h = img.size
     ImageOps.solarize(img,10)
-    threshold = 30
+    threshold = 190
 
     for i in range(0, w):
         for j in range(600, h):
             r, g, b = img.getpixel((i, j))
-            if r > threshold or g > threshold or b > threshold:
-                pix[i, j] = (255, 255, 255)
+            if r < threshold or g < threshold or b < threshold:
+                pix[i, j] = (0, 0, 0)
 
     img.save(img_path + "blackwhite" + img_extension)
 
