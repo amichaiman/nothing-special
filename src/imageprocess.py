@@ -1,39 +1,40 @@
 import pytesseract
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
+from PIL import ImageOps,ImageEnhance
+import pyscreenshot
+
+
+def get_image_text(img):
+    pix = img.load()
+    w, h = img.size
+    threshold = 160
+    for i in range(0, w):
+        for j in range(0, h):
+            try:
+                r, g, b = img.getpixel((i, j))
+                if r < threshold or g < threshold or b < threshold:
+                    pix[i, j] = (0, 0, 0)
+            except:
+                return "nope"
+    return pytesseract.image_to_string(img, lang="heb")
 
 
 def get_question_and_answers():
-    img_path = "/home/amichai/PycharmProjects/quick/src/"
-    img_extension = ".jpeg"
-    img = Image.open(img_path + "image" + img_extension)
-    pix = img.load()
-    w, h = img.size
-    ImageOps.solarize(img,10)
-    threshold = 190
-
-    for i in range(0, w):
-        for j in range(600, h):
-            r, g, b = img.getpixel((i, j))
-            if r < threshold or g < threshold or b < threshold:
-                pix[i, j] = (0, 0, 0)
-
-    img.save(img_path + "blackwhite" + img_extension)
-
-    img.crop((0, 700, w, h - 450)).save(img_path + "question" + img_extension)
-    img.crop((150, 1000, w, h - 300)).save(img_path + "answer0" + img_extension)
-    img.crop((0, 1150, w, h - 160)).save(img_path + "answer1" + img_extension)
-    img.crop((0, 1300, w, h - 30)).save(img_path + "answer2" + img_extension)
-
-    # img.crop((0, 900, w, h - 450)).save(img_path + "question" + img_extension)
-    # img.crop((0, 1170, w, h - 320)).save(img_path + "answer0" + img_extension)
-    # img.crop((0, 1300, w, h - 190)).save(img_path + "answer1" + img_extension)
-    # img.crop((0, 1430, w, h - 55)).save(img_path + "answer2" + img_extension)
-
+    question = get_image_text(pyscreenshot.grab(bbox=(50, 440, 400, 540)))
     answers = {
-        0: pytesseract.image_to_string(Image.open(img_path + "answer0" + img_extension), lang="heb"),
-        1: pytesseract.image_to_string(Image.open(img_path + "answer1" + img_extension), lang="heb"),
-        2: pytesseract.image_to_string(Image.open(img_path + "answer2" + img_extension), lang="heb")
+        0: get_image_text(pyscreenshot.grab(bbox=(136, 557, 350, 595))),
+        1: get_image_text(pyscreenshot.grab(bbox=(136, 608, 350, 650))),
+        2: get_image_text(pyscreenshot.grab(bbox=(136, 660, 350, 700)))
+    }
+    return question, answers
+
+
+def get_question_and_answers_quick():
+    question = get_image_text(pyscreenshot.grab(bbox=(50, 400, 400, 480)))
+    answers = {
+        0: get_image_text(pyscreenshot.grab(bbox=(136, 505, 350, 545))),
+        1: get_image_text(pyscreenshot.grab(bbox=(136, 560, 350, 595))),
+        2: get_image_text(pyscreenshot.grab(bbox=(136, 610, 350, 645))),
+        3: get_image_text(pyscreenshot.grab(bbox=(136, 665, 350, 700)))
     }
 
-    question = pytesseract.image_to_string(Image.open(img_path + "question" + img_extension), lang="heb")
     return question, answers

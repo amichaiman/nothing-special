@@ -23,7 +23,6 @@ def print_answers(answers):
                 print('%s %.2f' % (answers[i], s[i] / sum(s) * 100) + '%')
     except:
         print("couldn't compute an answer")
-        # print_soon(answers, 3)
 
 
 def add_occurrence(i, html_text, search_term, answers, weight):
@@ -104,12 +103,15 @@ def add_google_page_matches(question, answers, weight):
 def print_soon(answers, length):
     time.sleep(length)
 
-    if not found:
-        print("***********************************************")
-        print("************       estimate        ************")
-        print("***********************************************")
-        print_answers(answers)
-        print("***********************************************")
+    if sum(s) > 0:
+        if not found:
+            print("***********************************************")
+            print("************       estimate        ************")
+            print("***********************************************")
+            print_answers(answers)
+            print("***********************************************")
+    else:
+        print_soon(answers, 2)
 
 
 def get_answer(question, answers, quick):
@@ -119,14 +121,14 @@ def get_answer(question, answers, quick):
 
     s = [0 for i in answers]
 
-    timer = threading.Thread(target=print_soon, args=(answers, 2))
-    timer.daemon = True
-    timer.start()
-
     weight = 10
     url_list = google_search_result_websites(question)
 
     add_google_page_matches(question, answers, weight)
+
+    timer = threading.Thread(target=print_soon, args=(answers, 2))
+    timer.daemon = True
+    timer.start()
 
     if not quick and not unique:
         for url in url_list:
@@ -166,21 +168,30 @@ def concatinate_answers(answers):
 
 def remove_redundant_words(query):
     query = " " + query + " "
-    for word in [u'מה', u'איזה', u'מי', u'אם', u'הייתי', u'הגעתי', u'כנראה', u'עליהם', u'איזו', u'אילו', u'מהו'
-        , u'איך', u'קוראים', u'היכן', u'סביר', u'להניח', u'אותי', u'היה', u'את', u'ניתן', u'אני', u'של']:
-        reg = re.compile(u'[ ].?' + word + '[ ]')
+    for word in [u'מה', u'אותי', u'איזה', u'מי', u'אם', u'הייתי', u'הגעתי', u'כנראה', u'עליהם', u'איזו', u'אילו', u'מהו'
+        , u'איך', u'קוראים', u'היכן', u'סביר', u'להניח', u'היה', u'את', u'ניתן', u'אני', u'של']:
+        reg = re.compile(u' .?' + word + ' ')
+        print(u' ?[בשלמו]' + word + '?[,./]+ ')
         for match in reg.findall(query):
             # print(match)
             if query.find(word):
                 if match[-1] == ' ':
                     query = remove_word(query, match[1:-1])
                 else:
-                    query = remove_word(query, match[1:-1])
+                    query = remove_word(query, match[1:1])
+
+    reg = re.compile('[,.?]')
+    for match in reg.findall(query):
+        query = query.replace(match, '')
+
+    reg = re.compile('\s\s+|\n')
+    for match in reg.findall(query):
+        query = query.replace(match, ' ')
     return query
 
 
 def remove_word(query, to_remove):
-    return query.replace(to_remove, '')
+    return query.replace(to_remove, ' ')
 
 
 def parse_input(query, answers):
@@ -192,11 +203,17 @@ def parse_input(query, answers):
 
     for i in range(0, answers.__len__()):
         answers[i] = answers[i].replace("'", u"[י']")
-        if answers[i][0] == u'ב':
-            reg_count[0] += 1
-        elif answers[i][0] == u'ל':
-            reg_count[1] += 1
-
+        answers[i] = answers[i].replace(",", u" ")
+        answers[i] = answers[i].replace(".", u" ")
+        answers[i] = answers[i].replace("־", u" ")
+        answers[i] = answers[i].replace("|", u" ")
+        try:
+            if answers[i][0] == u'ב':
+                reg_count[0] += 1
+            elif answers[i][0] == u'ל':
+                reg_count[1] += 1
+        except:
+            pass
     if reg_count[0] == answers.__len__() or reg_count[1] == answers.__len__():
         for i in range(0, answers.__len__()):
             answers[i] = answers[i][1:]
