@@ -1,6 +1,7 @@
 from src.webcrawl import *
 import threading
 import time
+import pyautogui
 
 sum_lock = threading.Lock()
 index_of_answer_lock = threading.Lock()
@@ -11,11 +12,19 @@ index_of_answer = 0
 opposite = False
 unique = False
 threads = []
+answer_clicked = False
+quick = False
+snooze_count = 0
 
 
 def print_answers(answers):
     global opposite
+    global answer_clicked
+    global index_of_answer
 
+    if not answer_clicked:
+        answer_clicked = True
+        simulate_click(answers)
     try:
         print('%s : %.2f' % (answers[index_of_answer], s[index_of_answer] / sum(s) * 100) + '%')
         for i in range(0, answers.__len__()):
@@ -23,6 +32,7 @@ def print_answers(answers):
                 print('%s %.2f' % (answers[i], s[i] / sum(s) * 100) + '%')
     except:
         print("couldn't compute an answer")
+        return
 
 
 def add_occurrence(i, html_text, search_term, answers, weight):
@@ -39,7 +49,8 @@ def add_occurrence(i, html_text, search_term, answers, weight):
             print_answers(answers)
             with sum_lock:
                 found = True
-                index_of_answer = i
+                with index_of_answer_lock:
+                    index_of_answer = i
 
     reg = re.compile(u'[ (למהו.,/"]?' + search_term + u'[ -)!?.",/]')
 
@@ -56,9 +67,10 @@ def add_occurrence(i, html_text, search_term, answers, weight):
                 less_count = less_count + 1
         if less_count == answers.__len__() - 1:
             with sum_lock:
+                with index_of_answer_lock:
+                    index_of_answer = i
                 print_answers(answers)
                 found = True
-                index_of_answer = i
                 return
 
     for j in range(0, answers.__len__()):
@@ -100,7 +112,47 @@ def add_google_page_matches(question, answers, weight):
         threads.append(thread)
 
 
+def simulate_click(answers):
+    global quick
+    global index_of_answer
+
+    if sum(s) is 0:
+        print("guessing")
+        index_of_answer = 1
+
+    if index_of_answer is 0:
+        for i in range(0, answers.__len__()):
+            if opposite:
+                if s[i] < s[index_of_answer]:
+                    with index_of_answer_lock:
+                        index_of_answer = i
+            else:
+                if s[i] > s[index_of_answer]:
+                    with index_of_answer_lock:
+                        index_of_answer = i
+    if not quick:
+        if index_of_answer is 0:
+            pyautogui.click((110 + 350) / 2, (557 + 595) / 2)
+        elif index_of_answer is 1:
+            pyautogui.click((110 + 350) / 2, (608 + 650) / 2)
+        elif index_of_answer is 2:
+            pyautogui.click((110 + 350) / 2, (660 + 700) / 2)
+    else:
+        if index_of_answer is 0:
+            pyautogui.click((110 + 350) / 2, (505 + 545) / 2)
+        elif index_of_answer is 1:
+            pyautogui.click((110 + 350) / 2, (560 + 595) / 2)
+        elif index_of_answer is 2:
+            pyautogui.click((110 + 350) / 2, (610 + 645) / 2)
+        elif index_of_answer is 3:
+            pyautogui.click((110 + 350) / 2, (665 + 700) / 2)
+
+
 def print_soon(answers, length):
+    global index_of_answer
+    global answer_clicked
+    global snooze_count
+
     time.sleep(length)
 
     if sum(s) > 0:
@@ -111,55 +163,60 @@ def print_soon(answers, length):
             print_answers(answers)
             print("***********************************************")
     else:
+        snooze_count += 1
+        if snooze_count is 2:
+            simulate_click(answers)
         print_soon(answers, 2)
 
 
-def get_answer(question, answers, quick):
+def get_answer(question, answers, fast):
     global s
     global index_of_answer
     global opposite
+    global answer_clicked
+    global quick
 
-    s = [0 for i in answers]
+    s = [0 for i in range(0, answers.__len__())]
 
+    quick = fast
     weight = 10
     url_list = google_search_result_websites(question)
 
     add_google_page_matches(question, answers, weight)
 
-    timer = threading.Thread(target=print_soon, args=(answers, 2))
+    if quick:
+        simulate_click(answers)
+        for thread in threads:
+            thread.join()
+        return index_of_answer
+
+    timer = threading.Thread(target=print_soon, args=(answers, 2.5))
     timer.daemon = True
     timer.start()
 
-    if not quick and not unique:
-        for url in url_list:
-            thread = threading.Thread(target=search_url, args=(url, answers, weight))
-            thread.daemon = True
-            threads.append(thread)
-            if found:
-                return index_of_answer
+    for url in url_list:
+        thread = threading.Thread(target=search_url, args=(url, answers, weight))
+        thread.daemon = True
 
-            thread.start()
-            weight = weight * 0.7
+        if found:
+            for thread in threads:
+                thread.join()
+            return index_of_answer
+
+        threads.append(thread)
+        thread.start()
+        weight = weight * 0.7
+
     for thread in threads:
         thread.join()
 
     if not found:
-        for i in range(0, answers.__len__()):
-            if opposite:
-                if s[i] < s[index_of_answer]:
-                    with index_of_answer_lock:
-                        index_of_answer = i
-            else:
-                if s[i] > s[index_of_answer]:
-                    with index_of_answer_lock:
-                        index_of_answer = i
-
-    if not found:
         print_answers(answers)
+
     return index_of_answer
 
 
-def concatinate_answers(answers):
+def concatenate_answers(answers):
     query = ""
     for i in range(0, answers.__len__()):
         query += answers[i] + " "
@@ -170,23 +227,22 @@ def remove_redundant_words(query):
     query = " " + query + " "
     for word in [u'מה', u'אותי', u'איזה', u'מי', u'אם', u'הייתי', u'הגעתי', u'כנראה', u'עליהם', u'איזו', u'אילו', u'מהו'
         , u'איך', u'קוראים', u'היכן', u'סביר', u'להניח', u'היה', u'את', u'ניתן', u'אני', u'של']:
-        reg = re.compile(u' .?' + word + ' ')
-        print(u' ?[בשלמו]' + word + '?[,./]+ ')
+        reg = re.compile(r'\b.?' + word + r'\b')
         for match in reg.findall(query):
             # print(match)
-            if query.find(word):
-                if match[-1] == ' ':
-                    query = remove_word(query, match[1:-1])
-                else:
-                    query = remove_word(query, match[1:1])
+            loc = query.find(match)
+            if loc is not -1:
+                query = query[:loc] + query[loc + match.__len__():]
 
     reg = re.compile('[,.?]')
     for match in reg.findall(query):
         query = query.replace(match, '')
 
     reg = re.compile('\s\s+|\n')
-    for match in reg.findall(query):
-        query = query.replace(match, ' ')
+    extra_chars = ['\s\s+', '\n', ',', '.', '/?']
+    for extra_char in extra_chars:
+        query = query.replace(extra_char, ' ')
+
     return query
 
 
@@ -198,15 +254,20 @@ def parse_input(query, answers):
     global opposite
     global unique
 
+    # query = query.replace("'", u"[י']")
+
     # parse answers
     reg_count = [0, 0]
-
     for i in range(0, answers.__len__()):
         answers[i] = answers[i].replace("'", u"[י']")
-        answers[i] = answers[i].replace(",", u" ")
-        answers[i] = answers[i].replace(".", u" ")
-        answers[i] = answers[i].replace("־", u" ")
-        answers[i] = answers[i].replace("|", u" ")
+        answers[i] = answers[i].replace("נ", u"[נב]")
+
+        # get rid of [,.|]
+        reg = re.compile(u'[,.|]')
+        for match in reg.findall(answers[i]):
+            answers[i] = answers[i].replace(match, u"")
+
+        # if all answers start with ב or all start with ל, get rid of them
         try:
             if answers[i][0] == u'ב':
                 reg_count[0] += 1
@@ -220,26 +281,26 @@ def parse_input(query, answers):
 
     # parse question
     if query.find(u'יוצא דופן') != -1:
-        query = concatinate_answers(answers)
         unique = True
         opposite = True
-        return query, answers
+        return concatenate_answers(answers), answers
 
-    if query.find(u'מהבאים') != -1 or query.find(u'מהבאות') != -1:
-        if query.find(u'לא') != -1:
-            query = query[query.find(u'לא ') + 3:]
-            opposite = True
-            unique = True
-            return query + " " + concatinate_answers(answers), answers
+    if query.find(u'הבאים') != -1 or query.find(u'הבאות') != -1:
+        opposites = [u'אין', u'לא', u'איננו']
+        for opposite in opposites:
+            reg = re.compile(r'\b.?' + opposite + r'\b')
+            for match in reg.findall(query):
+                loc = query.find(match)
+                query = query[loc + opposite.__len__() + 1:]
+                opposite = True
+                unique = True
+            return remove_redundant_words(query) + " " + concatenate_answers(answers), answers
 
         query = query[query.find(u'מהבא') + 6:]
         return query, answers
-    loc = query.find(u'לא ')
-    if loc != -1:
-        query = query[:loc] + query[loc + 3:]
-        opposite = True
+
     try:
         query.replace("\n", " ")
-        return re.split("”", query)[1], answers
+        return re.split('"', query)[1], answers
     except:
         return remove_redundant_words(query), answers
