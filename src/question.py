@@ -5,6 +5,7 @@ import pyautogui
 
 sum_lock = threading.Lock()
 index_of_answer_lock = threading.Lock()
+print_answers_lock = threading.Lock()
 
 s = []
 found = False
@@ -46,7 +47,8 @@ def add_occurrence(i, html_text, search_term, answers, weight):
     if unique:
         reg = re.compile(u'חסר:*.{0}*.'.format(search_term))
         if reg.findall(html_text).__len__() > 0:
-            print_answers(answers)
+            with print_answers_lock:
+                print_answers(answers)
             with sum_lock:
                 found = True
                 with index_of_answer_lock:
@@ -69,19 +71,21 @@ def add_occurrence(i, html_text, search_term, answers, weight):
             with sum_lock:
                 with index_of_answer_lock:
                     index_of_answer = i
-                print_answers(answers)
+                with print_answers_lock:
+                    print_answers(answers)
                 found = True
                 return
 
     for j in range(0, answers.__len__()):
-        if not opposite and s[i] - s[j] > 150:
+        if not opposite and s[i] - s[j] > 85:
             if found:
                 return
             with sum_lock:
                 found = True
             with index_of_answer_lock:
                 index_of_answer = i
-                print_answers(answers)
+                with print_answers_lock:
+                    print_answers(answers)
 
 
 def search_url(url, answers, weight):
@@ -160,7 +164,8 @@ def print_soon(answers, length):
             print("***********************************************")
             print("************       estimate        ************")
             print("***********************************************")
-            print_answers(answers)
+            with print_answers_lock:
+                print_answers(answers)
             print("***********************************************")
     else:
         snooze_count += 1
@@ -190,7 +195,7 @@ def get_answer(question, answers, fast):
             thread.join()
         return index_of_answer
 
-    timer = threading.Thread(target=print_soon, args=(answers, 2.5))
+    timer = threading.Thread(target=print_soon, args=(answers, 2))
     timer.daemon = True
     timer.start()
 
@@ -211,7 +216,8 @@ def get_answer(question, answers, fast):
         thread.join()
 
     if not found:
-        print_answers(answers)
+        with print_answers_lock:
+            print_answers(answers)
 
     return index_of_answer
 
@@ -225,7 +231,7 @@ def concatenate_answers(answers):
 
 def remove_redundant_words(query):
     query = " " + query + " "
-    for word in [u'מה', u'אותי', u'איזה', u'מי', u'אם', u'הייתי', u'הגעתי', u'כנראה', u'עליהם', u'איזו', u'אילו', u'מהו'
+    for word in [u'מה', u'מהי', u'אותי', u'איזה', u'מי', u'אם', u'הייתי', u'הגעתי', u'כנראה', u'עליהם', u'איזו', u'אילו', u'מהו'
         , u'איך', u'קוראים', u'היכן', u'סביר', u'להניח', u'היה', u'את', u'ניתן', u'אני', u'של']:
         reg = re.compile(r'\b.?' + word + r'\b')
         for match in reg.findall(query):
@@ -258,10 +264,6 @@ def parse_input(query, answers):
     # parse answers
     reg_count = [0, 0]
     for i in range(0, answers.__len__()):
-        # answers[i] = answers[i].replace(u"'", u"[י']")
-        # answers[i] = answers[i].replace(u"נ", u"[נב]")
-        # answers[i] = answers[i].replace(u"ח", u"[חת]")
-        # answers[i] = answers[i].replace(u"ך", u"[ךר]")
         # get rid of [,.|]
         reg = re.compile(u'[,.|”]')
         for match in reg.findall(answers[i]):
