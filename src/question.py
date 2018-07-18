@@ -253,17 +253,17 @@ def remove_word(query, to_remove):
 def parse_input(query, answers):
     global opposite
     global unique
-
-    # query = query.replace("'", u"[י']")
+    concatenated_answers = concatenate_answers(answers)
 
     # parse answers
     reg_count = [0, 0]
     for i in range(0, answers.__len__()):
-        answers[i] = answers[i].replace("'", u"[י']")
-        answers[i] = answers[i].replace("נ", u"[נב]")
-
+        # answers[i] = answers[i].replace(u"'", u"[י']")
+        # answers[i] = answers[i].replace(u"נ", u"[נב]")
+        # answers[i] = answers[i].replace(u"ח", u"[חת]")
+        # answers[i] = answers[i].replace(u"ך", u"[ךר]")
         # get rid of [,.|]
-        reg = re.compile(u'[,.|]')
+        reg = re.compile(u'[,.|”]')
         for match in reg.findall(answers[i]):
             answers[i] = answers[i].replace(match, u"")
 
@@ -280,27 +280,32 @@ def parse_input(query, answers):
             answers[i] = answers[i][1:]
 
     # parse question
+    reg = re.compile(u'[,.|”־:]')
+    for match in reg.findall(query):
+        query = query.replace(match, '')
     if query.find(u'יוצא דופן') != -1:
         unique = True
         opposite = True
-        return concatenate_answers(answers), answers
+        return concatenated_answers, answers
 
     if query.find(u'הבאים') != -1 or query.find(u'הבאות') != -1:
         opposites = [u'אין', u'לא', u'איננו']
-        for opposite in opposites:
-            reg = re.compile(r'\b.?' + opposite + r'\b')
+        for o in opposites:
+            reg = re.compile(r'\b.?' + o + r'\b')
             for match in reg.findall(query):
                 loc = query.find(match)
-                query = query[loc + opposite.__len__() + 1:]
+                query = query[loc + o.__len__() + 1:]
                 opposite = True
                 unique = True
-            return remove_redundant_words(query) + " " + concatenate_answers(answers), answers
 
-        query = query[query.find(u'מהבא') + 6:]
-        return query, answers
+        query = query.replace(u'הבאים', '')
+        query = query.replace(u'הבאות', '')
+
+        return remove_redundant_words(query) + " " + concatenated_answers, answers
 
     try:
-        query.replace("\n", " ")
+        query = query.replace("'", u"י")
+        query = query.replace('\n', ' ')
         return re.split('"', query)[1], answers
     except:
         return remove_redundant_words(query), answers
