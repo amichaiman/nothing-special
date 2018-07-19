@@ -2,6 +2,7 @@ from src.webcrawl import *
 import threading
 import time
 import pyautogui
+import random
 
 sum_lock = threading.Lock()
 index_of_answer_lock = threading.Lock()
@@ -122,7 +123,7 @@ def simulate_click(answers):
 
     if sum(s) is 0:
         print("guessing")
-        index_of_answer = 1
+        index_of_answer = random.randint(0, answers.__len__())
 
     if index_of_answer is 0:
         for i in range(0, answers.__len__()):
@@ -231,7 +232,8 @@ def concatenate_answers(answers):
 
 def remove_redundant_words(query):
     query = " " + query + " "
-    for word in [u'מה', u'מהי', u'אותי', u'איזה', u'מי', u'אם', u'הייתי', u'הגעתי', u'כנראה', u'עליהם', u'איזו', u'אילו', u'מהו'
+    for word in [u'מה', u'מהי', u'אותי', u'איזה', u'מי', u'אם', u'הייתי', u'הגעתי', u'כנראה', u'עליהם', u'איזו',
+                 u'אילו', u'מהו'
         , u'איך', u'קוראים', u'היכן', u'סביר', u'להניח', u'היה', u'את', u'ניתן', u'אני', u'של']:
         reg = re.compile(r'\b.?' + word + r'\b')
         for match in reg.findall(query):
