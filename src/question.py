@@ -123,7 +123,7 @@ def simulate_click(answers):
 
     if sum(s) is 0:
         print("guessing")
-        index_of_answer = random.randint(0, answers.__len__())
+        index_of_answer = random.randint(0, answers.__len__()-1)
 
     if index_of_answer is 0:
         for i in range(0, answers.__len__()):
@@ -234,7 +234,7 @@ def remove_redundant_words(query):
     query = " " + query + " "
     for word in [u'מה', u'מהי', u'אותי', u'איזה', u'מי', u'אם', u'הייתי', u'הגעתי', u'כנראה', u'עליהם', u'איזו',
                  u'אילו', u'מהו'
-        , u'איך', u'קוראים', u'היכן', u'סביר', u'להניח', u'היה', u'את', u'ניתן', u'אני', u'של']:
+        , u'איך', u'קוראים', u'היכן', u'סביר', u'להניח', u'היה', u'את', u'ניתן', u'אני', u'של', u'מהבאים', u'מהבאות']:
         reg = re.compile(r'\b.?' + word + r'\b')
         for match in reg.findall(query):
             # print(match)
@@ -292,15 +292,15 @@ def parse_input(query, answers):
         opposite = True
         return concatenated_answers, answers
 
+    opposites = [u'אין', u'לא', u'איננו']
+    for o in opposites:
+        reg = re.compile(r'\b.?' + o + r'\b')
+        for match in reg.findall(query):
+            query = query.replace(match, '')
+            opposite = True
+
     if query.find(u'הבאים') != -1 or query.find(u'הבאות') != -1:
-        opposites = [u'אין', u'לא', u'איננו']
-        for o in opposites:
-            reg = re.compile(r'\b.?' + o + r'\b')
-            for match in reg.findall(query):
-                loc = query.find(match)
-                query = query[loc + o.__len__() + 1:]
-                opposite = True
-                unique = True
+        unique = True
 
         query = query.replace(u'הבאים', '')
         query = query.replace(u'הבאות', '')

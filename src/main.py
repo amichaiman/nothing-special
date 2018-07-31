@@ -30,14 +30,3 @@ for i in range(0, answers.__len__()):
 
 
 print("answer: " + answers[get_answer(question, answers, quick)])
-
-
-
-
-
-
-
-
-
-
-

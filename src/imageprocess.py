@@ -14,9 +14,10 @@ def get_image_text(img):
 
 def get_image_text_question(img):
     img = img.resize((img.size[0] * 2, img.size[1] * 2), Image.ANTIALIAS)
-    thresh = 210
+    thresh = 200
     img = img.convert('L').point(lambda x: 255 if x > thresh else 0, mode='1')
     # img.show()
+    # print(pytesseract.image_to_string(img, lang="heb+heb_fast"))
     return pytesseract.image_to_string(img, lang="heb+heb_fast")
 
 
